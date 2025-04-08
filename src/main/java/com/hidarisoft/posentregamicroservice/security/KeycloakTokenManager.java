@@ -24,9 +24,15 @@ import java.util.concurrent.locks.ReentrantLock;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
-@Scope("singleton") // Escopo singleton explícito
+@Scope("singleton")
 @Slf4j
 public class KeycloakTokenManager {
+    private static final String REFRESH_TOKEN = "refresh_token";
+    // Tempo antes da expiração para renovar o token (em segundos)
+    private static final int REFRESH_MARGIN = 60;
+
+    private static final ReentrantLock lock = new ReentrantLock();
+    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Value("${keycloak.auth-server-url:http://localhost:8090/auth}")
     private String keycloakAuthUrl;
@@ -39,12 +45,6 @@ public class KeycloakTokenManager {
 
     @Value("${keycloak.credentials.secret}")
     private String clientSecret;
-
-    // Tempo antes da expiração para renovar o token (em segundos)
-    private static final int REFRESH_MARGIN = 60;
-
-    private static final ReentrantLock lock = new ReentrantLock();
-    private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     @Getter
     private String accessToken;
@@ -127,10 +127,10 @@ public class KeycloakTokenManager {
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-            map.add("grant_type", "refresh_token");
+            map.add("grant_type", REFRESH_TOKEN);
             map.add("client_id", clientId);
             map.add("client_secret", clientSecret);
-            map.add("refresh_token", refreshToken);
+            map.add(REFRESH_TOKEN, refreshToken);
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
 
@@ -153,7 +153,7 @@ public class KeycloakTokenManager {
         accessToken = (String) responseMap.get("access_token");
 
         // Obtém o refresh token (se disponível)
-        refreshToken = (String) responseMap.get("refresh_token");
+        refreshToken = (String) responseMap.get(REFRESH_TOKEN);
 
         // Obtém o tempo de expiração diretamente da resposta
         if (responseMap.containsKey("expires_in")) {

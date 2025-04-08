@@ -22,8 +22,7 @@ public class FeignClientConfig {
         return requestTemplate -> {
             // Tenta obter token do contexto de segurança (usuário autenticado)
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication != null && authentication instanceof JwtAuthenticationToken) {
-                JwtAuthenticationToken jwtAuth = (JwtAuthenticationToken) authentication;
+            if (authentication instanceof JwtAuthenticationToken jwtAuth) {
                 String token = jwtAuth.getToken().getTokenValue();
                 requestTemplate.header("Authorization", "Bearer " + token);
             } else {
