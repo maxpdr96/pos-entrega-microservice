@@ -1,0 +1,28 @@
+package com.hidarisoft.posentregamicroservice.dto;
+
+import com.hidarisoft.posentregamicroservice.enums.StatusEntrega;
+import com.hidarisoft.posentregamicroservice.enums.TipoEntrega;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class EntregaDTO {
+    private Long pedidoId;
+    private Long entregadorId;
+    private String nomeEntregador;
+    private StatusEntrega status;
+    private TipoEntrega tipo;
+    private String enderecoEntrega;
+    private BigDecimal valorEntrega;
+    private BigDecimal valorPedido;
+    private LocalDateTime dataInicio;
+    private LocalDateTime dataFim;
+    private Integer tempoEstimado;
+    private String observacoes;
+}
