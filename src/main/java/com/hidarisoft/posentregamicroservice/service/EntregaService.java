@@ -5,9 +5,9 @@ import com.hidarisoft.posentregamicroservice.dto.AtualizacaoStatusEntregaDTO;
 import com.hidarisoft.posentregamicroservice.dto.AtualizacaoStatusPedidoDTO;
 import com.hidarisoft.posentregamicroservice.dto.CriacaoEntregaDTO;
 import com.hidarisoft.posentregamicroservice.dto.EntregaDTO;
-import com.hidarisoft.posentregamicroservice.dto.PedidoDTO;
 import com.hidarisoft.posentregamicroservice.enums.StatusEntrega;
 import com.hidarisoft.posentregamicroservice.enums.StatusEntregador;
+import com.hidarisoft.posentregamicroservice.enums.StatusPedido;
 import com.hidarisoft.posentregamicroservice.enums.TipoEntrega;
 import com.hidarisoft.posentregamicroservice.factory.EntregaStrategyFactory;
 import com.hidarisoft.posentregamicroservice.mapper.EntregaMapper;
@@ -18,11 +18,8 @@ import com.hidarisoft.posentregamicroservice.repository.EntregadorRepository;
 import com.hidarisoft.posentregamicroservice.strategy.EntregaStrategy;
 import com.hidarisoft.posentregamicroservice.strategy.SeletorEntregadorStrategy;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.EntityNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class EntregaService {
     private final EntregaRepository entregaRepository;
     private final EntregadorRepository entregadorRepository;
@@ -91,10 +89,12 @@ public class EntregaService {
 
             if (entregadorOpt.isPresent()) {
                 Entregador entregador = entregadorOpt.get();
+                log.info("Entregador: {}", entregador);
                 entrega.setEntregador(entregador);
 
                 // Atualizar o status do entregador
                 entregador.setStatus(StatusEntregador.EM_ENTREGA);
+                log.info("Atualiza status Entregador");
                 entregadorRepository.save(entregador);
             } else if (criacaoDTO.getTipo() != TipoEntrega.RETIRADA) {
                 // Se não for retirada e não encontrar entregador adequado, notificar
@@ -106,12 +106,19 @@ public class EntregaService {
         if (criacaoDTO.getTipo() != TipoEntrega.RETIRADA) {
             // Atualizar o status do pedido para "EM_TRANSPORTE"
             AtualizacaoStatusPedidoDTO statusPedidoDTO = new AtualizacaoStatusPedidoDTO();
-            statusPedidoDTO.setStatus("EM_TRANSPORTE");
-            pedidoClient.atualizarStatusPedido(criacaoDTO.getPedidoId(), statusPedidoDTO);
+            statusPedidoDTO.setStatus(StatusPedido.EM_TRANSPORTE);
+            var response = pedidoClient.atualizarStatusPedido(criacaoDTO.getPedidoId(), statusPedidoDTO);
+            if (Boolean.TRUE.equals(HttpStatus.valueOf(response.getStatusCode().value()).is2xxSuccessful())){
+                log.info("Atualiza status Pedido");
+            } else {
+              throw new IllegalArgumentException("Erro na chamada atualizar status pedido");
+            }
+            log.info("Atualiza status Pedido fim");
         }
 
         // Salvar a entrega
         entrega = entregaRepository.save(entrega);
+        log.info("Fim");
         return entregaMapper.toDto(entrega);
     }
 
@@ -158,7 +165,7 @@ public class EntregaService {
 
         // Atualizar o status do pedido para "ENTREGUE"
         AtualizacaoStatusPedidoDTO statusPedidoDTO = new AtualizacaoStatusPedidoDTO();
-        statusPedidoDTO.setStatus("ENTREGUE");
+        statusPedidoDTO.setStatus(StatusPedido.ENTREGUE);
         pedidoClient.atualizarStatusPedido(entrega.getPedidoId(), statusPedidoDTO);
     }
 
@@ -174,7 +181,7 @@ public class EntregaService {
 
         // Atualizar o status do pedido para "CANCELADO"
         AtualizacaoStatusPedidoDTO statusPedidoDTO = new AtualizacaoStatusPedidoDTO();
-        statusPedidoDTO.setStatus("CANCELADO");
+        statusPedidoDTO.setStatus(StatusPedido.CANCELADO);
         pedidoClient.atualizarStatusPedido(entrega.getPedidoId(), statusPedidoDTO);
     }
 }
