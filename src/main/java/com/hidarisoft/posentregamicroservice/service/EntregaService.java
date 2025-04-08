@@ -10,6 +10,7 @@ import com.hidarisoft.posentregamicroservice.enums.StatusEntrega;
 import com.hidarisoft.posentregamicroservice.enums.StatusEntregador;
 import com.hidarisoft.posentregamicroservice.enums.TipoEntrega;
 import com.hidarisoft.posentregamicroservice.factory.EntregaStrategyFactory;
+import com.hidarisoft.posentregamicroservice.mapper.EntregaMapper;
 import com.hidarisoft.posentregamicroservice.model.Entrega;
 import com.hidarisoft.posentregamicroservice.model.Entregador;
 import com.hidarisoft.posentregamicroservice.repository.EntregaRepository;
@@ -20,49 +21,48 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class EntregaService {
-    private EntregaRepository entregaRepository;
-    private EntregadorRepository entregadorRepository;
-    private SeletorEntregadorStrategy seletorEntregadorStrategy;
-    private EntregaStrategyFactory strategyFactory;
-    private PedidoClient pedidoClient;
+    private final EntregaRepository entregaRepository;
+    private final EntregadorRepository entregadorRepository;
+    private final SeletorEntregadorStrategy seletorEntregadorStrategy;
+    private final EntregaStrategyFactory strategyFactory;
+    private final PedidoClient pedidoClient;
+    private final EntregaMapper entregaMapper;
 
-    public EntregaService(EntregaRepository entregaRepository, EntregadorRepository entregadorRepository, SeletorEntregadorStrategy seletorEntregadorStrategy, EntregaStrategyFactory strategyFactory, PedidoClient pedidoClient) {
+    public EntregaService(EntregaRepository entregaRepository, EntregadorRepository entregadorRepository, SeletorEntregadorStrategy seletorEntregadorStrategy, EntregaStrategyFactory strategyFactory, PedidoClient pedidoClient, EntregaMapper entregaMapper) {
         this.entregaRepository = entregaRepository;
         this.entregadorRepository = entregadorRepository;
         this.seletorEntregadorStrategy = seletorEntregadorStrategy;
         this.strategyFactory = strategyFactory;
         this.pedidoClient = pedidoClient;
+        this.entregaMapper = entregaMapper;
     }
 
     @Transactional(readOnly = true)
     public List<EntregaDTO> listarTodas() {
-        return entregaRepository.findAll().stream()
-                .map(this::converterParaDTO)
-                .collect(Collectors.toList());
+        return entregaMapper.toDtoList(entregaRepository.findAll());
     }
 
     @Transactional(readOnly = true)
     public EntregaDTO buscarPorId(Long id) {
         Entrega entrega = entregaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Entrega não encontrada com ID: " + id));
-        return converterParaDTO(entrega);
+        return entregaMapper.toDto(entrega);
     }
 
     @Transactional
     public EntregaDTO criar(CriacaoEntregaDTO criacaoDTO) {
         // Verificar se o pedido existe consultando o serviço de pedidos
-        PedidoDTO pedidoDTO = pedidoClient.buscarPedidoPorId(criacaoDTO.getPedidoId()).getBody();
-        if (pedidoDTO == null) {
-            throw new EntityNotFoundException("Pedido não encontrado com ID: " + criacaoDTO.getPedidoId());
-        }
 
         // Verificar se já existe uma entrega para este pedido
         if (entregaRepository.findByPedidoId(criacaoDTO.getPedidoId()).isPresent()) {
@@ -112,7 +112,7 @@ public class EntregaService {
 
         // Salvar a entrega
         entrega = entregaRepository.save(entrega);
-        return converterParaDTO(entrega);
+        return entregaMapper.toDto(entrega);
     }
 
     @Transactional
@@ -143,7 +143,7 @@ public class EntregaService {
         }
 
         entrega = entregaRepository.save(entrega);
-        return converterParaDTO(entrega);
+        return entregaMapper.toDto(entrega);
     }
 
     private void finalizarEntrega(Entrega entrega) {
@@ -176,28 +176,5 @@ public class EntregaService {
         AtualizacaoStatusPedidoDTO statusPedidoDTO = new AtualizacaoStatusPedidoDTO();
         statusPedidoDTO.setStatus("CANCELADO");
         pedidoClient.atualizarStatusPedido(entrega.getPedidoId(), statusPedidoDTO);
-    }
-
-    private EntregaDTO converterParaDTO(Entrega entrega) {
-        EntregaDTO dto = new EntregaDTO();
-        dto.setId(entrega.getId());
-        dto.setPedidoId(entrega.getPedidoId());
-
-        if (entrega.getEntregador() != null) {
-            dto.setEntregadorId(entrega.getEntregador().getId());
-            dto.setNomeEntregador(entrega.getEntregador().getNome());
-        }
-
-        dto.setStatus(entrega.getStatus());
-        dto.setTipo(entrega.getTipo());
-        dto.setEnderecoEntrega(entrega.getEnderecoEntrega());
-        dto.setValorEntrega(entrega.getValorEntrega());
-        dto.setValorPedido(entrega.getValorPedido());
-        dto.setDataInicio(entrega.getDataInicio());
-        dto.setDataFim(entrega.getDataFim());
-        dto.setTempoEstimado(entrega.getTempoEstimado());
-        dto.setObservacoes(entrega.getObservacoes());
-
-        return dto;
     }
 }

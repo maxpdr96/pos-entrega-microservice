@@ -29,4 +29,5 @@ public class CriacaoEntregaDTO {
     private BigDecimal valorPedido;
 
     private String observacoes;
+
 }

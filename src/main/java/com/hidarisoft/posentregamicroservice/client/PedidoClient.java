@@ -1,6 +1,7 @@
 package com.hidarisoft.posentregamicroservice.client;
 
 
+import com.hidarisoft.posentregamicroservice.dto.AtualizacaoStatusPedidoDTO;
 import com.hidarisoft.posentregamicroservice.dto.PedidoDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -18,5 +19,5 @@ public interface PedidoClient {
     @PutMapping("/pedidos/{id}/status")
     ResponseEntity<PedidoDTO> atualizarStatusPedido(
             @PathVariable("id") Long id,
-            @RequestBody AtualizacaoStatusPedidoDTO statusDTO);
+            @RequestBody AtualizacaoStatusPedidoDTO statusPedidoDTO);
 }

@@ -1,22 +1,30 @@
 package com.hidarisoft.posentregamicroservice.controller;
 
 
-import com.entrega.gestaoentregas.dto.EntregadorDTO;
-import com.entrega.gestaoentregas.service.EntregadorService;
+import com.hidarisoft.posentregamicroservice.dto.EntregadorDTO;
+import com.hidarisoft.posentregamicroservice.service.EntregadorService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/entregadores")
 public class EntregadorController {
-    @Autowired
-    private EntregadorService entregadorService;
+    private final EntregadorService entregadorService;
+
+    public EntregadorController(EntregadorService entregadorService) {
+        this.entregadorService = entregadorService;
+    }
+
 
     @GetMapping
     public ResponseEntity<List<EntregadorDTO>> listarTodos() {
