@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EntregaDTO {
+    private Long id;
     private Long pedidoId;
     private Long entregadorId;
     private String nomeEntregador;

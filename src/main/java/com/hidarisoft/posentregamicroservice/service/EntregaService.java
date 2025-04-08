@@ -118,7 +118,6 @@ public class EntregaService {
 
         // Salvar a entrega
         entrega = entregaRepository.save(entrega);
-        log.info("Fim");
         return entregaMapper.toDto(entrega);
     }
 
