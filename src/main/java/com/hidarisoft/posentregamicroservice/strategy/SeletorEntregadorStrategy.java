@@ -11,13 +11,13 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 @Component
 public class SeletorEntregadorStrategy {
 
     private final EntregadorRepository entregadorRepository;
     private final EntregaStrategyFactory strategyFactory;
+    private final Random random = new Random();
 
     public SeletorEntregadorStrategy(EntregadorRepository entregadorRepository, EntregaStrategyFactory strategyFactory) {
         this.entregadorRepository = entregadorRepository;
@@ -53,7 +53,6 @@ public class SeletorEntregadorStrategy {
         }
 
         // Seleciona um entregador aleatório entre os adequados
-        Random random = new Random();
         int index = random.nextInt(adequados.size());
         return Optional.of(adequados.get(index));
     }

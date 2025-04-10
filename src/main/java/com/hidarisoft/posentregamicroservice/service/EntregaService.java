@@ -193,4 +193,26 @@ public class EntregaService {
         statusPedidoDTO.setStatus(StatusPedido.CANCELADO);
         pedidoClient.atualizarStatusPedido(entrega.getPedidoId(), statusPedidoDTO);
     }
+
+    @Transactional
+    public void excluirEntrega(Long id) {
+        Entrega entrega = entregaRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Entrega não encontrada com ID: " + id));
+
+        // Se houver um entregador associado, liberar o entregador
+        if (entrega.getEntregador() != null) {
+            Entregador entregador = entrega.getEntregador();
+            entregador.setStatus(StatusEntregador.DISPONIVEL);
+            entregadorRepository.save(entregador);
+        }
+
+        entregaRepository.delete(entrega);
+    }
+
+    public ResponseEntity<EntregaDTO> buscarPorPedidoId(Long pedidoId) {
+        Optional<Entrega> entrega = entregaRepository.findByPedidoId(pedidoId);
+        entrega.ifPresent(entregaDTO -> log.info("Entrega encontrada: {}", entregaDTO));
+        return entrega.map(e -> ResponseEntity.ok(entregaMapper.toDto(e)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
 }

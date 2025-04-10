@@ -6,6 +6,7 @@ import com.hidarisoft.posentregamicroservice.service.EntregadorService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,30 +28,35 @@ public class EntregadorController {
 
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<EntregadorDTO>> listarTodos() {
         List<EntregadorDTO> entregadores = entregadorService.listarTodos();
         return ResponseEntity.ok(entregadores);
     }
 
     @GetMapping("/disponiveis")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<EntregadorDTO>> listarDisponiveis() {
         List<EntregadorDTO> entregadores = entregadorService.listarDisponiveis();
         return ResponseEntity.ok(entregadores);
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EntregadorDTO> criarEntregador(@Valid @RequestBody EntregadorDTO entregadorDTO) {
         EntregadorDTO novoEntregador = entregadorService.criar(entregadorDTO);
         return new ResponseEntity<>(novoEntregador, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ENTREGADOR', 'ADMIN')")
     public ResponseEntity<EntregadorDTO> buscarPorId(@PathVariable Long id) {
         EntregadorDTO entregador = entregadorService.buscarPorId(id);
         return ResponseEntity.ok(entregador);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EntregadorDTO> atualizarEntregador(
             @PathVariable Long id,
             @Valid @RequestBody EntregadorDTO entregadorDTO) {
