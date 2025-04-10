@@ -19,7 +19,7 @@ import com.hidarisoft.posentregamicroservice.strategy.EntregaStrategy;
 import com.hidarisoft.posentregamicroservice.strategy.SeletorEntregadorStrategy;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +37,9 @@ public class EntregaService {
     private final PedidoClient pedidoClient;
     private final EntregaMapper entregaMapper;
 
-    public EntregaService(EntregaRepository entregaRepository, EntregadorRepository entregadorRepository, SeletorEntregadorStrategy seletorEntregadorStrategy, EntregaStrategyFactory strategyFactory, PedidoClient pedidoClient, EntregaMapper entregaMapper) {
+    public EntregaService(EntregaRepository entregaRepository, EntregadorRepository entregadorRepository,
+                          SeletorEntregadorStrategy seletorEntregadorStrategy, EntregaStrategyFactory strategyFactory,
+                          PedidoClient pedidoClient, EntregaMapper entregaMapper) {
         this.entregaRepository = entregaRepository;
         this.entregadorRepository = entregadorRepository;
         this.seletorEntregadorStrategy = seletorEntregadorStrategy;
@@ -60,14 +62,28 @@ public class EntregaService {
 
     @Transactional
     public EntregaDTO criar(CriacaoEntregaDTO criacaoDTO) {
-        // Verificar se o pedido existe consultando o serviço de pedidos
+        validarEntregaExistente(criacaoDTO.getPedidoId());
 
-        // Verificar se já existe uma entrega para este pedido
-        if (entregaRepository.findByPedidoId(criacaoDTO.getPedidoId()).isPresent()) {
-            throw new IllegalStateException("Já existe uma entrega para o pedido com ID: " + criacaoDTO.getPedidoId());
+        Entrega entrega = criarNovaEntrega(criacaoDTO);
+
+        aplicarEstrategiasDeEntrega(entrega, criacaoDTO);
+
+        if (criacaoDTO.getTipo() != TipoEntrega.RETIRADA) {
+            atribuirEntregador(entrega, criacaoDTO);
+            atualizarStatusPedido(criacaoDTO.getPedidoId(), StatusPedido.EM_TRANSPORTE);
         }
 
-        // Criar a entrega
+        entrega = entregaRepository.save(entrega);
+        return entregaMapper.toDto(entrega);
+    }
+
+    private void validarEntregaExistente(Long pedidoId) {
+        if (entregaRepository.findByPedidoId(pedidoId).isPresent()) {
+            throw new IllegalStateException("Já existe uma entrega para o pedido com ID: " + pedidoId);
+        }
+    }
+
+    private Entrega criarNovaEntrega(CriacaoEntregaDTO criacaoDTO) {
         Entrega entrega = new Entrega();
         entrega.setPedidoId(criacaoDTO.getPedidoId());
         entrega.setTipo(criacaoDTO.getTipo());
@@ -75,50 +91,44 @@ public class EntregaService {
         entrega.setValorPedido(criacaoDTO.getValorPedido());
         entrega.setObservacoes(criacaoDTO.getObservacoes());
         entrega.setStatus(StatusEntrega.PENDENTE);
+        return entrega;
+    }
 
-        // Obter a estratégia para o tipo de entrega
+    private void aplicarEstrategiasDeEntrega(Entrega entrega, CriacaoEntregaDTO criacaoDTO) {
         EntregaStrategy strategy = strategyFactory.getStrategy(criacaoDTO.getTipo());
-
-        // Calcular valor e tempo estimado usando a estratégia
         strategy.calcularValorEntrega(entrega, criacaoDTO);
         strategy.calcularTempoEstimado(entrega, criacaoDTO);
+    }
 
-        // Selecionar um entregador (se aplicável)
-        if (criacaoDTO.getTipo() != TipoEntrega.RETIRADA) {
-            Optional<Entregador> entregadorOpt = seletorEntregadorStrategy.selecionarEntregador(criacaoDTO);
+    private void atribuirEntregador(Entrega entrega, CriacaoEntregaDTO criacaoDTO) {
+        Optional<Entregador> entregadorOpt = seletorEntregadorStrategy.selecionarEntregador(criacaoDTO);
 
-            if (entregadorOpt.isPresent()) {
-                Entregador entregador = entregadorOpt.get();
-                log.info("Entregador: {}", entregador);
-                entrega.setEntregador(entregador);
+        entregadorOpt.ifPresentOrElse(entregador -> {
+            entrega.setEntregador(entregador);
+            atualizarStatusEntregador(entregador);
+        }, () -> {
+            throw new IllegalStateException("Nenhum entregador disponível para o tipo de entrega: " + criacaoDTO.getTipo());
+        });
+    }
 
-                // Atualizar o status do entregador
-                entregador.setStatus(StatusEntregador.EM_ENTREGA);
-                log.info("Atualiza status Entregador");
-                entregadorRepository.save(entregador);
-            } else if (criacaoDTO.getTipo() != TipoEntrega.RETIRADA) {
-                // Se não for retirada e não encontrar entregador adequado, notificar
-                throw new IllegalStateException("Nenhum entregador disponível para o tipo de entrega: " + criacaoDTO.getTipo());
-            }
+    private void atualizarStatusEntregador(Entregador entregador) {
+        log.info("Entregador selecionado: {}", entregador);
+        entregador.setStatus(StatusEntregador.EM_ENTREGA);
+        entregadorRepository.save(entregador);
+        log.info("Status do entregador atualizado para EM_ENTREGA");
+    }
+
+    private void atualizarStatusPedido(Long pedidoId, StatusPedido status) {
+        AtualizacaoStatusPedidoDTO statusPedidoDTO = new AtualizacaoStatusPedidoDTO();
+        statusPedidoDTO.setStatus(status);
+
+        ResponseEntity<?> response = pedidoClient.atualizarStatusPedido(pedidoId, statusPedidoDTO);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new IllegalArgumentException("Erro ao atualizar status do pedido: " + response.getStatusCode());
         }
 
-        // Se for retirada, não precisamos atualizar o status do pedido para "EM_TRANSPORTE"
-        if (criacaoDTO.getTipo() != TipoEntrega.RETIRADA) {
-            // Atualizar o status do pedido para "EM_TRANSPORTE"
-            AtualizacaoStatusPedidoDTO statusPedidoDTO = new AtualizacaoStatusPedidoDTO();
-            statusPedidoDTO.setStatus(StatusPedido.EM_TRANSPORTE);
-            var response = pedidoClient.atualizarStatusPedido(criacaoDTO.getPedidoId(), statusPedidoDTO);
-            if (Boolean.TRUE.equals(HttpStatus.valueOf(response.getStatusCode().value()).is2xxSuccessful())){
-                log.info("Atualiza status Pedido");
-            } else {
-              throw new IllegalArgumentException("Erro na chamada atualizar status pedido");
-            }
-            log.info("Atualiza status Pedido fim");
-        }
-
-        // Salvar a entrega
-        entrega = entregaRepository.save(entrega);
-        return entregaMapper.toDto(entrega);
+        log.info("Status do pedido {} atualizado para {}", pedidoId, status);
     }
 
     @Transactional
