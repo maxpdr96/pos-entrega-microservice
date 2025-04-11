@@ -17,7 +17,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Entrega {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "entrega_seq")
+    @SequenceGenerator(name = "entrega_seq", sequenceName = "entrega_seq", allocationSize = 1)
     private Long id;
 
     private Long pedidoId;

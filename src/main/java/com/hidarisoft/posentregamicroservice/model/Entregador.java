@@ -13,7 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Entregador {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "entregador_seq")
+    @SequenceGenerator(name = "entregador_seq", sequenceName = "entregador_seq", allocationSize = 1)
     private Long id;
 
     private String nome;
