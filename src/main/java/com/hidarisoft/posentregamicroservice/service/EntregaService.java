@@ -30,6 +30,7 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class EntregaService {
+    public static final String ENTREGA_NAO_ENCONTRADA_COM_ID = "Entrega não encontrada com ID: ";
     private final EntregaRepository entregaRepository;
     private final EntregadorRepository entregadorRepository;
     private final SeletorEntregadorStrategy seletorEntregadorStrategy;
@@ -56,7 +57,7 @@ public class EntregaService {
     @Transactional(readOnly = true)
     public EntregaDTO buscarPorId(Long id) {
         Entrega entrega = entregaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Entrega não encontrada com ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(ENTREGA_NAO_ENCONTRADA_COM_ID + id));
         return entregaMapper.toDto(entrega);
     }
 
@@ -134,7 +135,7 @@ public class EntregaService {
     @Transactional
     public EntregaDTO atualizarStatus(Long id, AtualizacaoStatusEntregaDTO statusDTO) {
         Entrega entrega = entregaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Entrega não encontrada com ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(ENTREGA_NAO_ENCONTRADA_COM_ID + id));
 
         // Atualizar o status da entrega
         entrega.setStatus(statusDTO.getStatus());
@@ -197,7 +198,7 @@ public class EntregaService {
     @Transactional
     public void excluirEntrega(Long id) {
         Entrega entrega = entregaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Entrega não encontrada com ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(ENTREGA_NAO_ENCONTRADA_COM_ID + id));
 
         // Se houver um entregador associado, liberar o entregador
         if (entrega.getEntregador() != null) {
