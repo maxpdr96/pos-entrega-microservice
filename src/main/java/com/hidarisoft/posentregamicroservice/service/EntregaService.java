@@ -30,7 +30,7 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class EntregaService {
-    public static final String ENTREGA_NAO_ENCONTRADA_COM_ID = "Entrega não encontrada com ID: ";
+    private static final String ENTREGA_NAO_ENCONTRADA_COM_ID = "Entrega não encontrada com ID: ";
     private final EntregaRepository entregaRepository;
     private final EntregadorRepository entregadorRepository;
     private final SeletorEntregadorStrategy seletorEntregadorStrategy;
