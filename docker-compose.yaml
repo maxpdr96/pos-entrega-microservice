@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+    postgres:
+        image: postgres:17.4
+        container_name: my-postgre
+        environment:
+            - POSTGRES_PASSWORD=Senh4Turm4#1
+        ports:
+            - "5432:5432"
+        networks:
+            - app-network
+        volumes:
+            - ./postgres-init:/docker-entrypoint-initdb.d
+
+    pgadmin:
+        image: dpage/pgadmin4:9.1.0
+        container_name: my-pg-admin
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=admin@gmail.com
+            - PGADMIN_DEFAULT_PASSWORD=Senh4Turm4#1
+            - PGADMIN_CONFIG_SERVER_MODE=True
+            - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+        ports:
+            - "7000:80"
+        depends_on:
+            - postgres
+        networks:
+            - app-network
+
+    keycloak:
+        image: quay.io/keycloak/keycloak:26.1.4
+        container_name: my-keycloak
+        environment:
+            - KC_DB=postgres
+            - KC_DB_URL_HOST=postgres
+            - KC_DB_URL_PORT=5432
+            - KC_DB_URL_DATABASE=keycloak
+            - KC_DB_USERNAME=admin
+            - KC_DB_PASSWORD=Senh4Turm4#1
+            - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+            - KC_BOOTSTRAP_ADMIN_PASSWORD=Senh4Turm4#1
+        ports:
+            - "7001:8080"
+        command: start-dev --import-realm
+        volumes:
+            - ./keycloak:/opt/keycloak/data/import
+        depends_on:
+            - postgres
+        networks:
+            - app-network
+
+networks:
+    app-network:
+        driver: bridge
